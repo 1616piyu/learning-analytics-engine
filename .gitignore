@@ -36,3 +36,9 @@ reports/*.pdf
 .DS_Store
 Thumbs.db
 data/ground_truth/anomaly_test_ground_truth.csv
+# Generated full-scale dataset exports
+data/exports/
+data/learning_analytics_full.db
+data/learning_analytics_anomaly_test.db
+
+data/ground_truth/full_scale_ground_truth.csv
