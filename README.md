@@ -1,75 +1,74 @@
-
 # Learning Analytics Engine
 
-A Python and SQLite project that generates synthetic learning-platform data, validates database integrity, detects suspicious records, and produces structured JSON analytics reports.
+A reproducible synthetic learning analytics pipeline built with Python, SQLite, and SQL. It generates LMS data at starter and full scales, validates relational integrity, detects data-quality anomalies, calculates learning metrics, and exports datasets for analysis.
 
-**Repository:** [learning-analytics-engine](https://github.com/1616piyu/learning-analytics-engine)
+**Repository:** [1616piyu/learning-analytics-engine](https://github.com/1616piyu/learning-analytics-engine)
 
 ## Project Overview
 
-This project simulates a Learning Management System (LMS) and builds a data analytics pipeline around its records.
-
 The pipeline:
 
-1. Generates learners, courses, cohorts, content, assessments, enrollments, activity events, assessment attempts, and course outcomes.
-2. Stores generated records in a relational SQLite database.
-3. Validates database structure, required fields, and foreign-key relationships.
-4. Detects suspicious activity events and course completion outcomes.
+1. Generates learners, courses, cohorts, enrollments, content, assessments, activity events, attempts, and course outcomes.
+2. Stores records in a relational SQLite database.
+3. Validates database integrity and foreign-key relationships.
+4. Detects duplicate activity, unenrolled activity, invalid completion outcomes, and timezone-boundary candidates.
 5. Calculates course completion, assessment performance, and learner engagement metrics.
-6. Exports analytics and anomaly findings to JSON.
-7. Runs automated tests to check correctness and reproducibility.
+6. Exports table data as CSV and JSONL, together with a SQL seed and integrity manifest.
+7. Evaluates anomaly detection against separate ground-truth labels.
+8. Runs automated tests for correctness and reproducibility.
 
-> **Note:** The dataset is synthetic and intended for development, testing, and demonstration. It does not represent production LMS statistics.
+All records are synthetic. They do not represent real learners or production LMS statistics.
 
-## Dataset Snapshot
+## Dataset Profiles
 
-One verified generated dataset contained the following records:
+| Entity | Starter | Full |
+|---|---:|---:|
+| Learners | 100 | 20,000 |
+| Courses | 10 | 500 |
+| Cohorts | 4 | 20 |
+| Content items | 40 | 2,000 |
+| Assessments | 10 | 500 |
+| Completion rules | 10 | 500 |
+| Enrollments | 386 | 100,000 |
+| Learner-cohort memberships | 100 | 20,000 |
+| Activity events | 695 | 2,000,000 |
+| Assessment attempts | 482 | 127,637 |
+| Course outcomes | 386 | 100,000 |
 
-| Entity | Count |
-|---|---:|
-| Learners | 100 |
-| Courses | 10 |
-| Cohorts | 4 |
-| Content items | 40 |
-| Assessments | 10 |
-| Completion rules | 10 |
-| Enrollments | 386 |
-| Learner-cohort memberships | 100 |
-| Activity events | 695 |
-| Assessment attempts | 482 |
-| Course outcomes | 386 |
-
-A previously generated report recorded 58 completed enrollments and a completion rate of 15.03%. These metrics describe that particular synthetic dataset and may change if the generator or configuration changes.
+The starter counts reflect the established starter configuration. The full-scale counts were verified against the generated database.
 
 ## Technology Stack
 
 - **Language:** Python
 - **Database:** SQLite
-- **Querying and analytics:** SQL
-- **Reporting:** JSON
+- **Analytics:** SQL
+- **Export formats:** CSV, JSONL, SQL, JSON
 - **Testing:** pytest
 - **Version control:** Git and GitHub
 
 ## Architecture
 
 ```text
+Configuration and Seed
+          |
+          v
 Synthetic Data Generators
           |
           v
-     SQLite Database
+    SQLite Database
           |
-          +----------------------+
-          |                      |
-          v                      v
- Data Integrity Checks     Anomaly Detection
-          |                      |
-          +-----------+----------+
+          +-----------------------+
+          |                       |
+          v                       v
+   Integrity Checks       Anomaly Detection
+          |                       |
+          +-----------+-----------+
                       |
                       v
              Analytics Reporting
                       |
                       v
-                  JSON Report
+             JSON and Data Exports
 ```
 
 ## Project Structure
@@ -78,12 +77,11 @@ Synthetic Data Generators
 learning-analytics-engine/
 ├── data/
 │   └── ground_truth/
-│       └── ground_truth.csv
 ├── docs/
 │   ├── business_rules.md
 │   ├── data_dictionary.md
-│   └── er_diagram.md
-├── reports/
+│   ├── er_diagram.md
+│   └── source_manifest.md
 ├── src/
 │   ├── database/
 │   │   ├── analytics.sql
@@ -99,43 +97,45 @@ learning-analytics-engine/
 │   │   ├── evaluate_anomalies.py
 │   │   ├── inject_anomalies.py
 │   │   └── integrity.py
-│   └── build_pipeline.py
+│   ├── build_pipeline.py
+│   └── export_dataset.py
 ├── tests/
 ├── requirements.txt
 ├── .gitignore
 └── README.md
 ```
 
+Generated databases and export directories are recreated locally and are excluded from version control.
+
 ## Key Features
 
 ### 1. Synthetic Data Generation
 
 - Generates reproducible sample data for a learning platform.
-- Uses a fixed random seed and reference time.
+- Uses a fixed random seed and reference timestamp.
+- Supports starter and full-scale profiles.
 - Supports a configurable SQLite database path.
 - Refuses to overwrite an existing database.
 
 ### 2. Data Integrity Validation
 
-Checks include:
+Implemented checks include:
 
 - Foreign-key violations.
-- Missing required values.
 - Required tables and columns.
-- Duplicate source-event identifiers.
+- Duplicate IDs in the checked entities.
+- Data and business-rule constraints covered by the validation code.
 
 ### 3. Rule-Based Anomaly Detection
 
 The detector checks for:
 
-- Duplicate activity events.
+- Duplicate activity events based on source-event identity.
 - Activity events without a valid enrollment.
 - Completed outcomes without a passing required assessment.
-- Events whose local calendar date differs from their UTC calendar date.
+- Timezone-boundary candidates where the local calendar date differs from the UTC date.
 
-Each finding contains a record identifier, issue type, and descriptive details.
-
-These checks use deterministic rules; they are not a trained machine-learning anomaly classifier.
+Timezone-boundary findings are candidates for review, not necessarily confirmed data errors. These checks use deterministic rules; they are not a trained machine-learning anomaly classifier.
 
 ### 4. Analytics Reporting
 
@@ -150,18 +150,25 @@ The JSON report includes:
 
 The anomaly status is `clean` when no findings are detected and `needs_investigation` when findings are present.
 
-### 5. Automated Testing
+### 5. Dataset Exports
 
-The test suite covers:
+After generating the full-scale database, run:
 
-- Anomaly detector behavior.
-- Injected anomaly detection.
-- Database integrity.
-- Reporting calculations.
-- Report overwrite protection.
-- Reproducibility.
+```powershell
+python -m src.export_dataset
+```
 
-The latest recorded local test result was **22 tests passed**. Run the tests again to verify the current version.
+By default, the exporter reads `data/learning_analytics_full.db` and writes to `data/exports/`.
+
+It produces:
+
+- **CSV:** one file per table.
+- **JSONL:** one JSON record per line, in one file per table.
+- **SQL seed:** `learning_analytics_seed.sql`, containing schema and table data.
+- **JSON summary:** `dataset_summary.json`, containing table counts and metadata.
+- **SHA-256 manifest:** `export_manifest.json`, containing row counts, columns, file sizes, and checksums for exported files.
+
+The exporter checks foreign-key integrity before exporting and processes records in batches.
 
 ## Getting Started
 
@@ -180,14 +187,14 @@ cd learning-analytics-engine
 
 ### 2. Create and Activate a Virtual Environment
 
-On Windows PowerShell:
+Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-On macOS or Linux:
+macOS or Linux:
 
 ```bash
 python3 -m venv .venv
@@ -203,57 +210,122 @@ python -m pip install -r requirements.txt
 ### 4. Run the Tests
 
 ```powershell
-python -m pytest tests -v
+python -m pytest -q
 ```
 
-### 5. Build a New Database
+The latest recorded local run passed **27 tests**.
 
-The pipeline refuses to overwrite an existing database. Choose a new filename for each fresh build.
+### 5. Build a Database
 
-On Windows PowerShell:
+The pipeline refuses to overwrite an existing database. Use a new filename for each build.
+
+**Starter profile:**
 
 ```powershell
-$env:LEARNING_ANALYTICS_DB = (Join-Path (Get-Location) "data\readme_demo.db")
-python -m src.build_pipeline
+python -m src.build_pipeline --scale starter --db .\data\starter_submission.db
 ```
 
-If `data\readme_demo.db` already exists, choose a different filename before running the command.
+**Full-scale profile:**
 
-The database file is ignored by Git.
+```powershell
+python -m src.build_pipeline --scale full --db .\data\learning_analytics_full.db
+```
+
+The full profile targets 20,000 learners, 500 courses, 100,000 enrollments, and 2,000,000 activity events. Generated database files are ignored by Git.
 
 ### 6. Generate a JSON Report
 
-Use the same database path and a new report filename:
+Use the database you created and a new report filename:
 
 ```powershell
-python -c "from pathlib import Path; from src.reporting.generate_report import build_report, write_report; db=Path('data/readme_demo.db').resolve(); report=build_report(db); write_report(report, Path('reports/readme_demo_report.json'))"
+python -c "from pathlib import Path; from src.reporting.generate_report import build_report, write_report; db=Path('data/learning_analytics_full.db').resolve(); report=build_report(db); write_report(report, Path('reports/full_scale_report.json'))"
 ```
 
-If the report file already exists, select another output filename. The report writer intentionally refuses to overwrite existing reports.
+If the report already exists, select a different output filename. The report writer intentionally refuses to overwrite existing reports.
 
-The generated report includes dataset metrics, data-quality checks, and anomaly findings.
+## Anomaly Evaluation
+
+Evaluation compares detector findings with labels stored separately from the detector features. Ground-truth labels must not be used as detector features.
+
+After building the full-scale database, create a separate test copy:
+
+```powershell
+Copy-Item .\data\learning_analytics_full.db .\data\learning_analytics_anomaly_test.db
+
+$env:LEARNING_ANALYTICS_DB = (Resolve-Path .\data\learning_analytics_anomaly_test.db).Path
+$env:LEARNING_ANALYTICS_GROUND_TRUTH = Join-Path (Get-Location).Path "data\ground_truth\full_scale_ground_truth.csv"
+
+python -m src.validation.inject_anomalies
+python -m src.validation.evaluate_anomalies
+```
+
+Run these commands in the same PowerShell session so the environment variables remain set.
+
+The injector creates five labelled records: two duplicate-event records, one unenrolled activity event, one invalid completion outcome, and one timezone review case.
+
+### Recorded Evaluation
+
+| Metric | Result |
+|---|---:|
+| Expected actionable labels | 4 |
+| True positives | 4 |
+| False positives | 0 |
+| False negatives | 0 |
+| Precision | 100% |
+| Recall | 100% |
+| Review cases detected | 1 of 1 |
+
+These results apply to the injected test cases. They do not establish equivalent performance on every possible anomaly or real-world data.
+
+## Full-Scale Reproducibility
+
+Two independent full-scale builds were generated using the same configured seed and reference timestamp.
+
+The following exports matched byte-for-byte:
+
+- All 11 CSV files.
+- All 11 JSONL files.
+- The SQL seed file.
+
+The row counts also matched across all 11 database tables.
+
+The JSON summary checksums differed because the summary contains run-specific metadata, including the source database name and generation timestamp. Its table counts matched across both runs.
 
 ## Documentation
 
 - [Business Rules](docs/business_rules.md)
 - [Data Dictionary](docs/data_dictionary.md)
 - [Entity Relationship Diagram](docs/er_diagram.md)
+- [Synthetic Dataset Source Manifest](docs/source_manifest.md)
+
+## Validation Status
+
+The current validation evidence includes:
+
+- 27 passing automated tests.
+- Successful full-scale generation with the target row counts.
+- Zero foreign-key violations in the recorded full-scale validation.
+- No duplicate IDs in the checked primary-key columns.
+- Successful CSV, JSONL, SQL, and JSON summary exports.
+- Matching checksums for table-data exports across two independent full-scale builds.
+- 100% precision and recall on the injected actionable anomaly labels, with the review case detected.
 
 ## Current Limitations
 
 - The dataset is synthetic.
-- Reports are currently generated as JSON; a deployed dashboard is not included.
 - Anomaly detection uses deterministic rules rather than a trained ML model.
-- Data-quality checks cover implemented rules and cannot guarantee that every possible business rule is satisfied.
-- A continuous integration workflow is not currently included.
+- Timezone-boundary findings require review.
+- Data-quality checks cover implemented rules and cannot guarantee every possible business rule is satisfied.
+- The project does not include a deployed analytics dashboard.
+- Generated full-scale databases and exports are recreated locally rather than committed to the repository.
 
 ## Future Improvements
 
 - Add continuous integration to run tests automatically.
+- Expand anomaly rules and evaluate them on more varied labelled cases.
 - Add time-based learner engagement trends.
 - Compare engagement and completion across cohorts.
 - Build an interactive analytics dashboard.
-- Expand anomaly rules and evaluate precision and recall.
 - Add structured logging and configurable report options.
 
 ## Author
