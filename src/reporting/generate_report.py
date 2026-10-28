@@ -6,9 +6,12 @@ from collections import Counter
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
-from src.reporting.learner_risk import get_learner_risk_metrics
 
-from src.reporting.business_metrics import get_cohort_performance, get_inactive_enrollment_metrics
+from src.reporting.business_metrics import (
+    get_cohort_performance,
+    get_inactive_enrollment_metrics,
+)
+from src.reporting.learner_risk import get_learner_risk_metrics
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -55,11 +58,18 @@ def get_data_quality(conn, table_counts):
     checks = []
 
     def add_check(name, description, count, severity="warning"):
+        if count == 0:
+            status = "pass"
+        elif severity == "warning":
+            status = "warning"
+        else:
+            status = "fail"
+
         checks.append({
             "check": name,
             "description": description,
             "issue_count": count,
-            "status": "pass" if count == 0 else "fail",
+            "status": status,
             "severity": severity,
         })
 
@@ -163,14 +173,17 @@ def get_data_quality(conn, table_counts):
                 duplicate_source_events,
             )
 
-    failed_checks = sum(
-        check["status"] == "fail" for check in checks
-    )
-
     return {
         "checks_run": len(checks),
-        "failed_checks": failed_checks,
-        "passed_checks": len(checks) - failed_checks,
+        "failed_checks": sum(
+            check["status"] == "fail" for check in checks
+        ),
+        "warning_checks": sum(
+            check["status"] == "warning" for check in checks
+        ),
+        "passed_checks": sum(
+            check["status"] == "pass" for check in checks
+        ),
         "foreign_key_violation_count": len(fk_violations),
         "checks": checks,
     }
@@ -383,7 +396,6 @@ def build_report(database_path=None):
               AND outcome_status = 'completed'
         """).fetchone()[0]
 
-        # Uses the same database path as the rest of the report.
         anomalies = get_anomaly_summary(database_path)
 
         report = {
@@ -446,7 +458,6 @@ def write_report(report, output_path=None):
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Exclusive creation prevents accidental overwrites.
     with output_path.open("x", encoding="utf-8") as file:
         json.dump(report, file, indent=2, ensure_ascii=False)
 
@@ -462,7 +473,6 @@ def main():
 
     report = build_report(database_path)
 
-    # Use a new filename so the existing report is preserved.
     output_path = (
         PROJECT_ROOT
         / "reports"
@@ -481,14 +491,12 @@ def main():
     print("=" * 40)
     print(f"Checks run: {report['data_quality']['checks_run']}")
     print(f"Passed: {report['data_quality']['passed_checks']}")
+    print(f"Warnings: {report['data_quality']['warning_checks']}")
     print(f"Failed: {report['data_quality']['failed_checks']}")
 
     print("\nANOMALY DETECTION")
     print("=" * 40)
-    print(
-        "Status: "
-        f"{report['anomaly_detection']['status']}"
-    )
+    print(f"Status: {report['anomaly_detection']['status']}")
     print(
         "Total findings: "
         f"{report['anomaly_detection']['total_findings']}"
