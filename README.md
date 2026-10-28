@@ -304,7 +304,7 @@ The JSON summary checksums differed because the summary contains run-specific me
 
 The current validation evidence includes:
 
-- 27 passing automated tests.
+- 25 passing automated tests.
 - Successful full-scale generation with the target row counts.
 - Zero foreign-key violations in the recorded full-scale validation.
 - No duplicate IDs in the checked primary-key columns.
@@ -333,4 +333,5 @@ The current validation evidence includes:
 ## Author
 
 Developed as a learning analytics and data engineering portfolio project.
+
 
