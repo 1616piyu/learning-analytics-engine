@@ -44,3 +44,6 @@ data/learning_analytics_anomaly_test.db
 data/ground_truth/full_scale_ground_truth.csv
 
 data/exports_repro/
+
+data/ground_truth/ground_truth.csv
+data/ground_truth/*.csv

@@ -1,6 +1,0 @@
-record_id,issue_type,expected_decision
-EVT-ANOMALY-DUP-000001,duplicate_event,duplicate
-EVT-ANOMALY-DUP-000002,duplicate_event,duplicate
-EVT-ANOMALY-UNENROLLED-000001,unenrolled_activity,invalid
-OUT-ANOMALY-000001,completion_before_assessment,invalid
-EVT-ANOMALY-TZ-000001,timezone_boundary,review
