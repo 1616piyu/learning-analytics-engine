@@ -7,6 +7,8 @@ from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
+from src.reporting.business_metrics import get_cohort_performance, get_inactive_enrollment_metrics
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -367,6 +369,8 @@ def build_report(database_path=None):
         completion = get_completion_metrics(conn)
         assessments = get_assessment_metrics(conn)
         engagement = get_engagement_metrics(conn)
+        cohort_performance = get_cohort_performance(conn)
+        inactive_enrollments = get_inactive_enrollment_metrics(conn)
 
         total_enrollments = table_counts.get("Enrollment", 0)
 
@@ -417,6 +421,8 @@ def build_report(database_path=None):
             "course_completion": completion,
             "assessment_performance": assessments,
             "learner_engagement": engagement,
+            "cohort_performance": cohort_performance,
+            "inactive_enrollments": inactive_enrollments,
         }
 
     return report
