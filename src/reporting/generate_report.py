@@ -6,6 +6,7 @@ from collections import Counter
 from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
+from src.reporting.learner_risk import get_learner_risk_metrics
 
 from src.reporting.business_metrics import get_cohort_performance, get_inactive_enrollment_metrics
 
@@ -371,6 +372,7 @@ def build_report(database_path=None):
         engagement = get_engagement_metrics(conn)
         cohort_performance = get_cohort_performance(conn)
         inactive_enrollments = get_inactive_enrollment_metrics(conn)
+        learner_risk = get_learner_risk_metrics(conn)
 
         total_enrollments = table_counts.get("Enrollment", 0)
 
@@ -423,6 +425,7 @@ def build_report(database_path=None):
             "learner_engagement": engagement,
             "cohort_performance": cohort_performance,
             "inactive_enrollments": inactive_enrollments,
+            "learner_risk": learner_risk,
         }
 
     return report
