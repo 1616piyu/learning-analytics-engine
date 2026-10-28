@@ -1,8 +1,12 @@
-# Learning Analytics Engine
+﻿# Learning Analytics Engine
 
 A reproducible synthetic learning analytics pipeline built with Python, SQLite, and SQL. It generates LMS data at starter and full scales, validates relational integrity, detects data-quality anomalies, calculates learning metrics, and exports datasets for analysis.
 
 **Repository:** [1616piyu/learning-analytics-engine](https://github.com/1616piyu/learning-analytics-engine)
+
+[![Tests](https://github.com/1616piyu/learning-analytics-engine/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/1616piyu/learning-analytics-engine/actions/workflows/tests.yml)
+
+
 
 ## Project Overview
 
@@ -213,7 +217,7 @@ python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
-The latest recorded local run passed **25 tests**.
+The latest recorded local run passed **27 tests**.
 
 ### 5. Build a Database
 
@@ -304,7 +308,7 @@ The JSON summary checksums differed because the summary contains run-specific me
 
 The current validation evidence includes:
 
-- 25 passing automated tests.
+- 27 passing automated tests.
 - Successful full-scale generation with the target row counts.
 - Zero foreign-key violations in the recorded full-scale validation.
 - No duplicate IDs in the checked primary-key columns.
@@ -333,5 +337,3 @@ The current validation evidence includes:
 ## Author
 
 Developed as a learning analytics and data engineering portfolio project.
-
-
