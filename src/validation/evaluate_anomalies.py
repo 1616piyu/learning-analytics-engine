@@ -5,6 +5,7 @@ from pathlib import Path
 
 from src.validation.anomaly_detector import detect_anomalies
 
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 GROUND_TRUTH_PATH = Path(
@@ -15,8 +16,28 @@ GROUND_TRUTH_PATH = Path(
 )
 
 
-def evaluate():
-    if not GROUND_TRUTH_PATH.exists():
+def evaluate(database_path=None):
+    """
+    Compare anomaly findings against the ground-truth labels.
+
+    Args:
+        database_path: Optional SQLite database path. If omitted,
+            use LEARNING_ANALYTICS_DB or the default database path.
+    """
+    if database_path is None:
+        database_path = os.environ.get(
+            "LEARNING_ANALYTICS_DB",
+            str(PROJECT_ROOT / "data" / "learning_analytics.db"),
+        )
+
+    database_path = Path(database_path).resolve()
+
+    if not database_path.is_file():
+        raise FileNotFoundError(
+            f"Database not found: {database_path}"
+        )
+
+    if not GROUND_TRUTH_PATH.is_file():
         raise FileNotFoundError(
             f"Ground-truth file not found: {GROUND_TRUTH_PATH}"
         )
@@ -25,13 +46,18 @@ def evaluate():
         newline="", encoding="utf-8"
     ) as file:
         reader = csv.DictReader(file)
-        required_columns = {"record_id", "issue_type", "expected_decision"}
+        required_columns = {
+            "record_id",
+            "issue_type",
+            "expected_decision",
+        }
 
         if not reader.fieldnames or not required_columns.issubset(
             reader.fieldnames
         ):
             raise ValueError(
-                f"Ground truth must contain columns: {sorted(required_columns)}"
+                "Ground truth must contain columns: "
+                f"{sorted(required_columns)}"
             )
 
         truth_rows = list(reader)
@@ -41,7 +67,7 @@ def evaluate():
         for row in truth_rows
     }
 
-    findings = detect_anomalies()
+    findings = detect_anomalies(database_path)
 
     predicted = {
         (item["record"], item["issue_type"])
@@ -64,7 +90,7 @@ def evaluate():
 
     print("\nANOMALY EVALUATION REPORT")
     print("=" * 40)
-    print(f"Database: configured by LEARNING_ANALYTICS_DB")
+    print(f"Database: {database_path}")
     print(f"Ground truth: {GROUND_TRUTH_PATH}")
     print(f"Expected labels: {len(truth)}")
     print(f"Detected labels: {len(predicted)}")

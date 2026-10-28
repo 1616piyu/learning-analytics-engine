@@ -16,10 +16,33 @@ DB_PATH = Path(
 )
 
 
-def detect_anomalies():
+def detect_anomalies(database_path=None):
+    """
+    Detect known data-quality anomalies in a SQLite database.
+
+    Args:
+        database_path: Optional path to the database. If omitted,
+            use LEARNING_ANALYTICS_DB when set, otherwise DB_PATH.
+
+    Returns:
+        A list of findings with record, issue_type, and details.
+    """
+    if database_path is None:
+        database_path = os.environ.get(
+            "LEARNING_ANALYTICS_DB",
+            str(DB_PATH),
+        )
+
+    database_path = Path(database_path).resolve()
+
+    if not database_path.is_file():
+        raise FileNotFoundError(
+            f"Database not found: {database_path}"
+        )
+
     findings = []
 
-    with closing(sqlite3.connect(DB_PATH)) as conn:
+    with closing(sqlite3.connect(database_path)) as conn:
         # 1. Detect duplicate activity events by source event identity.
         duplicate_groups = conn.execute("""
             SELECT
