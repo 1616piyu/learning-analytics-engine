@@ -25,6 +25,24 @@ The pipeline:
 11. Provides an interactive Streamlit dashboard for exploring metrics, cohorts, learner risk, and data quality.
 12. Runs automated tests for correctness and reproducibility.
 
+
+## Dashboard Preview
+
+The interactive dashboard provides an overview of learning outcomes, course performance, cohort comparisons, learner risk, and data quality.
+
+### Executive Overview
+![Learning Analytics Dashboard Overview](screenshots/overview.png)
+
+### Course Analytics
+![Course Analytics](screenshots/course-analytics.png)
+
+### Cohort Analytics
+![Cohort Analytics](screenshots/cohort-analytics.png)
+
+### Data Quality
+![Data Quality Dashboard](screenshots/data-quality.png)
+
+
 ## Key Features
 
 ### 1. Synthetic Data Generation
