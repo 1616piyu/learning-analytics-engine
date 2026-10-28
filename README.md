@@ -213,7 +213,7 @@ python -m pip install -r requirements.txt
 python -m pytest -q
 ```
 
-The latest recorded local run passed **27 tests**.
+The latest recorded local run passed **25 tests**.
 
 ### 5. Build a Database
 
@@ -333,3 +333,4 @@ The current validation evidence includes:
 ## Author
 
 Developed as a learning analytics and data engineering portfolio project.
+
