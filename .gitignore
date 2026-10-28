@@ -35,3 +35,4 @@ reports/*.pdf
 .idea/
 .DS_Store
 Thumbs.db
+data/ground_truth/anomaly_test_ground_truth.csv
