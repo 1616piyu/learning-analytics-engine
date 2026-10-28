@@ -21,7 +21,6 @@
 - course_id: STRING, FK -> Course
 - enrolled_at: DATETIME, required
 - status: ENUM(enrolled, in_progress, completed, withdrawn)
-- cohort_id: STRING, optional FK -> Cohort
 
 ## 4. ContentItem
 - content_id: STRING, primary key
