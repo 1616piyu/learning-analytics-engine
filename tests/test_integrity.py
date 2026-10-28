@@ -1,50 +1,66 @@
 
-import os
 import sqlite3
 from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-CLEAN_DB = PROJECT_ROOT / "data" / "reproducibility_test.db"
-ANOMALY_DB = PROJECT_ROOT / "data" / "anomaly_test.db"
+from src.build_pipeline import build_pipeline
+from src.validation.inject_anomalies import inject_anomalies
+
+
+@pytest.fixture
+def integrity_databases(tmp_path, monkeypatch):
+    """Build clean and anomalous databases in temporary storage."""
+    clean_db = tmp_path / "clean.db"
+    anomaly_db = tmp_path / "anomaly.db"
+    ground_truth = tmp_path / "ground_truth.csv"
+
+    build_pipeline(clean_db)
+    build_pipeline(anomaly_db)
+
+    import src.validation.inject_anomalies as injector
+
+    monkeypatch.setattr(injector, "DATABASE_PATH", anomaly_db)
+    monkeypatch.setattr(injector, "GROUND_TRUTH_PATH", ground_truth)
+    inject_anomalies()
+
+    return clean_db, anomaly_db
 
 
 @pytest.fixture
 def integrity_validator(monkeypatch):
-    """Load the integrity validator against a selected database."""
-
+    """Validate the database path selected by each test."""
     def _validate(db_path):
-        if not db_path.exists():
-            pytest.fail(f"Required test database not found: {db_path}")
-
-        monkeypatch.setenv("LEARNING_ANALYTICS_DB", str(db_path))
-
         import src.validation.integrity as integrity
 
-        # The module reads its database path at import time.
-        integrity.DATABASE_PATH = Path(
-            os.environ["LEARNING_ANALYTICS_DB"]
+        monkeypatch.setattr(
+            integrity, "DATABASE_PATH", Path(db_path)
         )
-
         return integrity.validate_database()
 
     return _validate
 
 
-def test_clean_database_passes_integrity_checks(integrity_validator):
-    assert integrity_validator(CLEAN_DB) is True
+def test_clean_database_passes_integrity_checks(
+    integrity_databases, integrity_validator
+):
+    clean_db, _ = integrity_databases
+    assert integrity_validator(clean_db) is True
 
 
-def test_anomaly_database_fails_integrity_checks(integrity_validator):
-    # The injected unenrolled activity is intentionally invalid.
-    assert integrity_validator(ANOMALY_DB) is False
+def test_anomaly_database_fails_integrity_checks(
+    integrity_databases, integrity_validator
+):
+    _, anomaly_db = integrity_databases
+    assert integrity_validator(anomaly_db) is False
 
 
-def test_clean_database_has_no_foreign_key_violations():
-    assert CLEAN_DB.exists(), f"Missing database: {CLEAN_DB}"
+def test_clean_database_has_no_foreign_key_violations(
+    integrity_databases,
+):
+    clean_db, _ = integrity_databases
 
-    with sqlite3.connect(CLEAN_DB) as conn:
+    with sqlite3.connect(clean_db) as conn:
         violations = conn.execute(
             "PRAGMA foreign_key_check"
         ).fetchall()
@@ -52,8 +68,8 @@ def test_clean_database_has_no_foreign_key_violations():
     assert violations == []
 
 
-def test_clean_database_has_expected_core_tables():
-    assert CLEAN_DB.exists(), f"Missing database: {CLEAN_DB}"
+def test_clean_database_has_expected_core_tables(integrity_databases):
+    clean_db, _ = integrity_databases
 
     expected_tables = {
         "Learner",
@@ -69,7 +85,7 @@ def test_clean_database_has_expected_core_tables():
         "CourseOutcome",
     }
 
-    with sqlite3.connect(CLEAN_DB) as conn:
+    with sqlite3.connect(clean_db) as conn:
         actual_tables = {
             row[0]
             for row in conn.execute("""

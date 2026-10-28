@@ -1,12 +1,11 @@
 
-import os
 from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-CLEAN_DB = PROJECT_ROOT / "data" / "reproducibility_test.db"
-ANOMALY_DB = PROJECT_ROOT / "data" / "anomaly_test.db"
+from src.build_pipeline import build_pipeline
+from src.validation.inject_anomalies import inject_anomalies
+
 
 EXPECTED_ANOMALIES = {
     ("EVT-ANOMALY-DUP-000001", "duplicate_event"),
@@ -18,48 +17,44 @@ EXPECTED_ANOMALIES = {
 
 
 @pytest.fixture
-def detector_for_db(monkeypatch):
-    """Load the detector with an explicitly selected database."""
+def detector_databases(tmp_path, monkeypatch):
+    """Create clean and anomaly-injected databases in temporary storage."""
+    clean_db = tmp_path / "clean.db"
+    anomaly_db = tmp_path / "anomaly.db"
+    ground_truth = tmp_path / "ground_truth.csv"
 
-    def _load(db_path):
-        if not db_path.exists():
-            pytest.fail(f"Required test database not found: {db_path}")
+    build_pipeline(clean_db)
+    build_pipeline(anomaly_db)
 
-        monkeypatch.setenv("LEARNING_ANALYTICS_DB", str(db_path))
+    import src.validation.inject_anomalies as injector
 
-        # The detector captures DB_PATH during module import.
-        import src.validation.anomaly_detector as detector
+    monkeypatch.setattr(injector, "DATABASE_PATH", anomaly_db)
+    monkeypatch.setattr(injector, "GROUND_TRUTH_PATH", ground_truth)
+    inject_anomalies()
 
-        # Ensure tests use the selected database even if the module
-        # was imported earlier by another test.
-        detector.DB_PATH = Path(os.environ["LEARNING_ANALYTICS_DB"])
+    import src.validation.anomaly_detector as detector
 
-        return detector.detect_anomalies
-
-    return _load
+    return clean_db, anomaly_db, detector.detect_anomalies
 
 
-def test_detector_returns_a_list(detector_for_db):
-    detect_anomalies = detector_for_db(ANOMALY_DB)
+def test_detector_returns_a_list(detector_databases):
+    _, anomaly_db, detect_anomalies = detector_databases
 
-    findings = detect_anomalies()
+    findings = detect_anomalies(anomaly_db)
 
     assert isinstance(findings, list)
 
 
-def test_clean_database_has_no_anomalies(detector_for_db):
-    detect_anomalies = detector_for_db(CLEAN_DB)
+def test_clean_database_has_no_anomalies(detector_databases):
+    clean_db, _, detect_anomalies = detector_databases
 
-    findings = detect_anomalies()
-
-    assert findings == []
+    assert detect_anomalies(clean_db) == []
 
 
-def test_all_injected_anomalies_are_detected(detector_for_db):
-    detect_anomalies = detector_for_db(ANOMALY_DB)
+def test_all_injected_anomalies_are_detected(detector_databases):
+    _, anomaly_db, detect_anomalies = detector_databases
 
-    findings = detect_anomalies()
-
+    findings = detect_anomalies(anomaly_db)
     detected = {
         (item["record"], item["issue_type"])
         for item in findings
@@ -68,11 +63,12 @@ def test_all_injected_anomalies_are_detected(detector_for_db):
     assert EXPECTED_ANOMALIES.issubset(detected)
 
 
-def test_injected_anomalies_have_no_unexpected_findings(detector_for_db):
-    detect_anomalies = detector_for_db(ANOMALY_DB)
+def test_injected_anomalies_have_no_unexpected_findings(
+    detector_databases,
+):
+    _, anomaly_db, detect_anomalies = detector_databases
 
-    findings = detect_anomalies()
-
+    findings = detect_anomalies(anomaly_db)
     detected = {
         (item["record"], item["issue_type"])
         for item in findings
@@ -81,10 +77,10 @@ def test_injected_anomalies_have_no_unexpected_findings(detector_for_db):
     assert detected == EXPECTED_ANOMALIES
 
 
-def test_findings_have_required_fields(detector_for_db):
-    detect_anomalies = detector_for_db(ANOMALY_DB)
+def test_findings_have_required_fields(detector_databases):
+    _, anomaly_db, detect_anomalies = detector_databases
 
-    findings = detect_anomalies()
+    findings = detect_anomalies(anomaly_db)
 
     for finding in findings:
         assert finding["record"]
