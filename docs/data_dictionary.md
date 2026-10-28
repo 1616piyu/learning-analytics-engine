@@ -90,3 +90,21 @@
 - joined_at: DATETIME, required
 - left_at: DATETIME, optional
 - Composite primary key: learner_id, cohort_id, joined_at
+
+## Data Quality and Validation Notes
+
+- Primary keys must be unique and non-null.
+- Foreign keys must reference existing records, except where a relationship
+  is explicitly optional.
+- Enum values must match the allowed values documented for each field.
+- Date and timestamp fields must follow the documented ordering and
+  lifecycle rules.
+- Scores and completion percentages must remain within their documented
+  ranges.
+- Activity events with missing or invalid enrollment associations are treated
+  as data-quality cases, not silently assumed to be valid learner activity.
+- Completion eligibility must be evaluated against the applicable
+  completion rule and required assessment results.
+- Cohort comparisons must use consistent reporting windows.
+- Timestamps used for cross-system comparisons must have clearly defined
+  timezone handling.
